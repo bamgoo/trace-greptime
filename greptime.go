@@ -122,7 +122,7 @@ func (c *greptimeConnection) Write(spans ...trace.Span) error {
 	}
 	_ = tbl.WithSanitate(false)
 
-	fieldMap := trace.ResolveFields(c.instance.Setting, greptimeDefaultFields())
+	fieldMap := trace.ResolveFields(c.instance.Config.Fields, greptimeDefaultFields())
 	pairs := orderedPairs(fieldMap)
 	for _, p := range pairs {
 		kind, dtype := greptimeFieldSpec(p.source)
@@ -160,7 +160,6 @@ type fieldPair struct {
 
 func greptimeDefaultFields() map[string]string {
 	return map[string]string{
-		"driver":               "driver",
 		"project":              "project",
 		"profile":              "profile",
 		"node":                 "node",
@@ -193,7 +192,7 @@ func greptimeDefaultFields() map[string]string {
 
 func orderedPairs(fields map[string]string) []fieldPair {
 	order := []string{
-		"driver", "project", "profile", "node", "service", "service_name", "name",
+		"project", "profile", "node", "service", "service_name", "name",
 		"trace_id", "span_id", "parent_id", "parent_span_id",
 		"kind", "target", "status", "status_code", "status_message", "error",
 		"cost_ms", "duration_ms", "start_ms", "end_ms",
@@ -224,7 +223,7 @@ func orderedPairs(fields map[string]string) []fieldPair {
 
 func greptimeFieldSpec(source string) (string, types.ColumnType) {
 	switch source {
-	case "driver", "project", "profile", "node", "service", "service_name", "name":
+	case "project", "profile", "node", "service", "service_name", "name":
 		return "tag", types.STRING
 	case "ts":
 		return "timestamp", types.TIMESTAMP_MILLISECOND
