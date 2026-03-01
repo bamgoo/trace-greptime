@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -53,6 +54,12 @@ func (d *greptimeDriver) Connect(inst *trace.Instance) (trace.Connection, error)
 		Insecure: true,
 	}
 	if inst != nil {
+		if v, ok := getString(inst.Setting, "url"); ok && v != "" {
+			applyGreptimeURL(&setting, v)
+		}
+		if v, ok := getString(inst.Setting, "dsn"); ok && v != "" {
+			applyGreptimeURL(&setting, v)
+		}
 		if v, ok := getString(inst.Setting, "host"); ok && v != "" {
 			setting.Host = v
 		}
@@ -94,6 +101,86 @@ func (d *greptimeDriver) Connect(inst *trace.Instance) (trace.Connection, error)
 		}
 	}
 	return &greptimeConnection{instance: inst, setting: setting}, nil
+}
+
+func applyGreptimeURL(setting *greptimeSetting, raw string) {
+	if setting == nil {
+		return
+	}
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return
+	}
+	if !strings.Contains(raw, "://") {
+		raw = "greptime://" + raw
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u == nil {
+		return
+	}
+	if host := strings.TrimSpace(u.Hostname()); host != "" {
+		setting.Host = host
+	}
+	if p := strings.TrimSpace(u.Port()); p != "" {
+		if port, err := strconv.Atoi(p); err == nil && port > 0 {
+			setting.Port = port
+		}
+	}
+	if u.User != nil {
+		if user := strings.TrimSpace(u.User.Username()); user != "" {
+			setting.Username = user
+		}
+		if pass, ok := u.User.Password(); ok {
+			setting.Password = pass
+		}
+	}
+	path := strings.TrimSpace(strings.TrimPrefix(u.Path, "/"))
+	if path != "" {
+		parts := strings.Split(path, "/")
+		if len(parts) > 0 && strings.TrimSpace(parts[0]) != "" {
+			setting.Database = strings.TrimSpace(parts[0])
+		}
+		if len(parts) > 1 && strings.TrimSpace(parts[1]) != "" {
+			setting.Table = strings.TrimSpace(parts[1])
+		}
+	}
+	q := u.Query()
+	if v := strings.TrimSpace(q.Get("database")); v != "" {
+		setting.Database = v
+	}
+	if v := strings.TrimSpace(q.Get("db")); v != "" {
+		setting.Database = v
+	}
+	if v := strings.TrimSpace(q.Get("table")); v != "" {
+		setting.Table = v
+	}
+	if v := strings.TrimSpace(q.Get("username")); v != "" {
+		setting.Username = v
+	}
+	if v := strings.TrimSpace(q.Get("user")); v != "" {
+		setting.Username = v
+	}
+	if v := strings.TrimSpace(q.Get("password")); v != "" {
+		setting.Password = v
+	}
+	if v := strings.TrimSpace(q.Get("pass")); v != "" {
+		setting.Password = v
+	}
+	if v := strings.TrimSpace(q.Get("timeout")); v != "" {
+		if d, err := time.ParseDuration(v); err == nil && d > 0 {
+			setting.Timeout = d
+		}
+	}
+	if v := strings.TrimSpace(q.Get("insecure")); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			setting.Insecure = b
+		}
+	}
+	if v := strings.TrimSpace(q.Get("tls")); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			setting.Insecure = !b
+		}
+	}
 }
 
 func (c *greptimeConnection) Open() error {
@@ -160,44 +247,34 @@ type fieldPair struct {
 
 func greptimeDefaultFields() map[string]string {
 	return map[string]string{
-		"project":              "project",
-		"profile":              "profile",
-		"node":                 "node",
-		"service":              "service",
-		"service_name":         "service_name",
-		"name":                 "name",
-		"trace_id":             "trace_id",
-		"span_id":              "span_id",
-		"parent_id":            "parent_id",
-		"parent_span_id":       "parent_span_id",
-		"kind":                 "kind",
-		"target":               "target",
-		"status":               "status",
-		"status_code":          "status_code",
-		"status_message":       "status_message",
-		"error":                "error",
-		"cost_ms":              "cost_ms",
-		"duration_ms":          "duration_ms",
-		"start_ms":             "start_ms",
-		"end_ms":               "end_ms",
-		"start_time_unix_nano": "start_time_unix_nano",
-		"end_time_unix_nano":   "end_time_unix_nano",
-		"timestamp":            "timestamp",
-		"attrs":                "attrs",
-		"attributes":           "attributes",
-		"resource":             "resource",
-		"ts":                   "ts",
+		"project":        "project",
+		"profile":        "profile",
+		"node":           "node",
+		"time":           "timestamp",
+		"start":          "start_time_unix_nano",
+		"end":            "end_time_unix_nano",
+		"cost":           "duration_unix_nano",
+		"step":           "step",
+		"trace_id":       "trace_id",
+		"span_id":        "span_id",
+		"parent_id":      "parent_id",
+		"parent_span_id": "parent_span_id",
+		"kind":           "kind",
+		"entry":          "entry",
+		"status":         "status",
+		"code":           "code",
+		"result":         "result",
+		"attributes":     "attributes",
+		"resource":       "resource",
 	}
 }
 
 func orderedPairs(fields map[string]string) []fieldPair {
 	order := []string{
-		"project", "profile", "node", "service", "service_name", "name",
+		"project", "profile", "node", "time", "start", "end", "cost", "step",
 		"trace_id", "span_id", "parent_id", "parent_span_id",
-		"kind", "target", "status", "status_code", "status_message", "error",
-		"cost_ms", "duration_ms", "start_ms", "end_ms",
-		"start_time_unix_nano", "end_time_unix_nano", "timestamp",
-		"attrs", "attributes", "resource", "ts",
+		"kind", "entry", "status", "code", "result",
+		"attributes", "resource",
 	}
 	pairs := make([]fieldPair, 0, len(fields))
 	used := map[string]bool{}
@@ -223,11 +300,11 @@ func orderedPairs(fields map[string]string) []fieldPair {
 
 func greptimeFieldSpec(source string) (string, types.ColumnType) {
 	switch source {
-	case "project", "profile", "node", "service", "service_name", "name":
+	case "project", "profile", "node", "step", "entry":
 		return "tag", types.STRING
-	case "ts":
-		return "timestamp", types.TIMESTAMP_MILLISECOND
-	case "cost_ms", "duration_ms", "start_ms", "end_ms", "start_time_unix_nano", "end_time_unix_nano", "timestamp":
+	case "time":
+		return "timestamp", types.TIMESTAMP_NANOSECOND
+	case "start", "end", "cost", "code":
 		return "field", types.INT64
 	default:
 		return "field", types.STRING
@@ -240,7 +317,34 @@ func convertGreptimeValue(source string, values map[string]any) any {
 		return ""
 	}
 	switch source {
-	case "cost_ms", "duration_ms", "start_ms", "end_ms", "start_time_unix_nano", "end_time_unix_nano", "timestamp":
+	case "time":
+		switch vv := v.(type) {
+		case time.Time:
+			return vv
+		case int64:
+			return time.Unix(0, vv)
+		case int:
+			return time.Unix(0, int64(vv))
+		case float64:
+			return time.Unix(0, int64(vv))
+		case string:
+			s := strings.TrimSpace(vv)
+			if s == "" {
+				return time.Unix(0, 0)
+			}
+			if n, err := strconv.ParseInt(s, 10, 64); err == nil {
+				return time.Unix(0, n)
+			}
+			// Keep parsing permissive for custom string formats.
+			if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
+				return t
+			}
+			if t, err := time.Parse("2006-01-02 15:04:05.999999999 -0700 MST", s); err == nil {
+				return t
+			}
+		}
+		return time.Unix(0, 0)
+	case "start", "end", "cost", "code":
 		switch vv := v.(type) {
 		case int64:
 			return vv
@@ -254,7 +358,7 @@ func convertGreptimeValue(source string, values map[string]any) any {
 			}
 		}
 		return int64(0)
-	case "attrs", "attributes", "resource":
+	case "attributes", "resource":
 		switch vv := v.(type) {
 		case Map:
 			if b, err := json.Marshal(vv); err == nil {
