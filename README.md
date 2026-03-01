@@ -1,19 +1,43 @@
 # trace-greptime
 
-infrago greptime trace driver.
+`trace-greptime` 是 `trace` 模块的 `greptime` 驱动。
 
-```toml
-[trace.greptime]
-driver = "greptime"
-fields = { trace_id = "tid", span_id = "sid", parent_span_id = "psid", timestamp = "timestamp" }
-[trace.greptime.setting]
-url = "greptime://user:pass@127.0.0.1:4001/public/traces?insecure=true&timeout=5s"
-host = "127.0.0.1"
-port = 4001
-database = "public"
-table = "traces"
+## 安装
+
+```bash
+go get github.com/infrago/trace@latest
+go get github.com/infrago/trace-greptime@latest
 ```
 
-`fields` is configured on `[trace.greptime]` (not under `setting`).
+## 接入
 
-`url` / `dsn` is supported; explicit keys like `host/port/database/table/...` override parsed values.
+```go
+import (
+    _ "github.com/infrago/trace"
+    _ "github.com/infrago/trace-greptime"
+    "github.com/infrago/infra"
+)
+
+func main() {
+    infra.Run()
+}
+```
+
+## 配置示例
+
+```toml
+[trace]
+driver = "greptime"
+```
+
+## 公开 API（摘自源码）
+
+- `func (d *greptimeDriver) Connect(inst *trace.Instance) (trace.Connection, error)`
+- `func (c *greptimeConnection) Open() error`
+- `func (c *greptimeConnection) Close() error { return nil }`
+- `func (c *greptimeConnection) Write(spans ...trace.Span) error`
+
+## 排错
+
+- driver 未生效：确认模块段 `driver` 值与驱动名一致
+- 连接失败：检查 endpoint/host/port/鉴权配置

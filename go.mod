@@ -24,7 +24,7 @@ require (
 	google.golang.org/protobuf v1.30.0 // indirect
 )
 
-replace github.com/infrago/infra => ../infra
+replace github.com/infrago/infra => ../bamgoo
 
 replace github.com/infrago/base => ../base
 
