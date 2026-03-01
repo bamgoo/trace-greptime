@@ -1,6 +1,6 @@
 # trace-greptime
 
-bamgoo greptime trace driver.
+infrago greptime trace driver.
 
 ```toml
 [trace.greptime]

@@ -1,12 +1,12 @@
-module github.com/bamgoo/trace-greptime
+module github.com/infrago/trace-greptime
 
 go 1.25.3
 
 require (
 	github.com/GreptimeTeam/greptimedb-ingester-go v0.4.0
-	github.com/bamgoo/bamgoo v0.0.1
-	github.com/bamgoo/base v0.0.1
-	github.com/bamgoo/trace v0.0.1
+	github.com/infrago/infra v0.0.1
+	github.com/infrago/base v0.0.1
+	github.com/infrago/trace v0.0.1
 )
 
 require (
@@ -24,8 +24,8 @@ require (
 	google.golang.org/protobuf v1.30.0 // indirect
 )
 
-replace github.com/bamgoo/bamgoo => ../bamgoo
+replace github.com/infrago/infra => ../infra
 
-replace github.com/bamgoo/base => ../base
+replace github.com/infrago/base => ../base
 
-replace github.com/bamgoo/trace => ../trace
+replace github.com/infrago/trace => ../trace
