@@ -1,43 +1,47 @@
 # trace-greptime
 
-`trace-greptime` 是 `trace` 模块的 `greptime` 驱动。
+`trace-greptime` 是 `github.com/infrago/trace` 的**greptime 驱动**。
 
-## 安装
+## 包定位
 
-```bash
-go get github.com/infrago/trace@latest
-go get github.com/infrago/trace-greptime@latest
-```
+- 类型：驱动
+- 作用：把 `trace` 模块的统一接口落到 `greptime` 后端实现
 
-## 接入
+## 快速接入
 
 ```go
 import (
     _ "github.com/infrago/trace"
     _ "github.com/infrago/trace-greptime"
-    "github.com/infrago/infra"
 )
-
-func main() {
-    infra.Run()
-}
 ```
-
-## 配置示例
 
 ```toml
 [trace]
 driver = "greptime"
 ```
 
-## 公开 API（摘自源码）
+## `setting` 专用配置项
 
-- `func (d *greptimeDriver) Connect(inst *trace.Instance) (trace.Connection, error)`
-- `func (c *greptimeConnection) Open() error`
-- `func (c *greptimeConnection) Close() error { return nil }`
-- `func (c *greptimeConnection) Write(spans ...trace.Span) error`
+配置位置：`[trace].setting`
 
-## 排错
+- `url`
+- `dsn`
+- `host`
+- `server`
+- `port`
+- `username`
+- `user`
+- `password`
+- `pass`
+- `database`
+- `db`
+- `table`
+- `timeout`
+- `insecure`
+- `tls`
 
-- driver 未生效：确认模块段 `driver` 值与驱动名一致
-- 连接失败：检查 endpoint/host/port/鉴权配置
+## 说明
+
+- `setting` 仅对当前驱动生效，不同驱动键名可能不同
+- 连接失败时优先核对 `setting` 中 host/port/认证/超时等参数
